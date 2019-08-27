@@ -65,6 +65,11 @@
 #define SERIAL_DEBUG 1
 #endif
 
+// Managing Write protect pin
+#define MANAGE_WP false //false if WP pin remains not connected
+#define DEFAULT_WP_PIN	13 //write protection pin - active high, write enabled when low
+#define DEFAULT_WP_STATUS  false //false means protection is off - write is enabled
+
 class FRAM_MB85RC_I2C {
  public:
   FRAM_MB85RC_I2C(void);
