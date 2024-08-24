@@ -61,9 +61,9 @@
 #include "FRAM_defines.h"
 
 // Enabling debug I2C - comment to disable / normal operations
-#ifndef SERIAL_DEBUG
-#define SERIAL_DEBUG 1
-#endif
+//#ifndef SERIAL_DEBUG
+//#define SERIAL_DEBUG 1
+//#endif
 
 // Managing Write protect pin
 #define MANAGE_WP false //false if WP pin remains not connected
@@ -71,52 +71,53 @@
 #define DEFAULT_WP_STATUS  false //false means protection is off - write is enabled
 
 class FRAM_MB85RC_I2C {
- public:
-  FRAM_MB85RC_I2C(void);
-  FRAM_MB85RC_I2C(uint8_t address, boolean wp);
-  FRAM_MB85RC_I2C(uint8_t address, boolean wp, int pin);
-  FRAM_MB85RC_I2C(uint8_t address, boolean wp, int pin, uint16_t chipDensity);
+    public:
+        explicit FRAM_MB85RC_I2C(TwoWire* wire);
+        FRAM_MB85RC_I2C(TwoWire* wire, uint8_t address, bool wp);
+        FRAM_MB85RC_I2C(TwoWire* wire, uint8_t address, bool wp, int pin);
+        FRAM_MB85RC_I2C(TwoWire* wire, uint8_t address, bool wp, int pin, uint16_t chipDensity);
 
-  void  begin(void);
-  byte checkDevice(void);
-  byte readBit(uint16_t framAddr, uint8_t bitNb, byte *bit);
-  byte setOneBit(uint16_t framAddr, uint8_t bitNb);
-  byte clearOneBit(uint16_t framAddr, uint8_t bitNb);
-  byte toggleBit(uint16_t framAddr, uint8_t bitNb);
-  byte readArray (uint16_t framAddr, byte items, uint8_t value[]);
-  byte writeArray (uint16_t framAddr, byte items, uint8_t value[]);
-  byte readByte (uint16_t framAddr, uint8_t *value);
-  byte writeByte (uint16_t framAddr, uint8_t value);
-  byte copyByte (uint16_t origAddr, uint16_t destAddr);
-  byte readWord(uint16_t framAddr, uint16_t *value);
-  byte writeWord(uint16_t framAddr, uint16_t value);
-  byte readLong(uint16_t framAddr, uint32_t *value);
-  byte writeLong(uint16_t framAddr, uint32_t value);
-  byte getOneDeviceID(uint8_t idType, uint16_t *id);
-  boolean isReady(void);
-  boolean getWPStatus(void);
-  byte enableWP(void);
-  byte disableWP(void);
-  byte eraseDevice(void);
+        void  begin();
+        byte checkDevice();
+        byte readBit(uint16_t framAddr, uint8_t bitNb, byte *bit);
+        byte setOneBit(uint16_t framAddr, uint8_t bitNb);
+        byte clearOneBit(uint16_t framAddr, uint8_t bitNb);
+        byte toggleBit(uint16_t framAddr, uint8_t bitNb);
+        byte readArray (uint16_t framAddr, byte items, uint8_t value[]);
+        byte writeArray (uint16_t framAddr, byte items, uint8_t value[]);
+        byte readByte (uint16_t framAddr, uint8_t *value);
+        byte writeByte (uint16_t framAddr, uint8_t value);
+        byte copyByte (uint16_t origAddr, uint16_t destAddr);
+        byte readWord(uint16_t framAddr, uint16_t *value);
+        byte writeWord(uint16_t framAddr, uint16_t value);
+        byte readLong(uint16_t framAddr, uint32_t *value);
+        byte writeLong(uint16_t framAddr, uint32_t value);
+        byte getOneDeviceID(uint8_t idType, uint16_t *id);
+        bool isReady();
+        bool getWPStatus();
+        byte enableWP();
+        byte disableWP();
+        byte eraseDevice();
 
- private:
-  uint8_t i2c_addr;
-  boolean _framInitialised;
-  boolean _manualMode;
-  uint16_t manufacturer;
-  uint16_t productid;
-  uint16_t densitycode;
-  uint16_t density;
-  uint16_t maxaddress;
+    private:
+        TwoWire* wire;
+        uint8_t i2c_addr;
+        bool _framInitialised;
+        bool _manualMode;
+        uint16_t manufacturer;
+        uint16_t productid;
+        uint16_t densitycode;
+        uint16_t density;
+        uint16_t maxaddress;
 
-  int wpPin;
-  boolean wpStatus;
+        int wpPin;
+        bool wpStatus;
 
-  byte getDeviceIDs(void);
-  byte setDeviceIDs(void);
-  byte initWP(boolean wp);
-  byte deviceIDs2Serial(void);
-  void I2CAddressAdapt(uint16_t framAddr);
+    byte getDeviceIDs();
+    byte setDeviceIDs();
+    byte initWP(bool wp);
+    byte deviceIDs2Serial();
+    void I2CAddressAdapt(uint16_t framAddr);
 };
 
 #endif

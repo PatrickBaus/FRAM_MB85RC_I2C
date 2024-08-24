@@ -9,7 +9,7 @@
 #define MANUALMODE_PRODUCT_ID     0xF00
 #define MANUALMODE_DENSITY_ID     0xF00
 
-// The density codes gives the memory's adressing scheme
+// The density codes gives the memory's addressing scheme
 #define DENSITY_MB85RC04V         0x00 // 4K
 #define DENSITY_MB85RC64TA        0x03 // 64K
 #define DENSITY_MB85RC256V        0x05 // 512K
@@ -23,14 +23,14 @@
 
 // Devices do not support Device ID reading:
 //   - FUJITSU:
-//       - 16 Kbit: MB85RC16, MB85RC16V
-//       - 64 Kbit: MB85RC64A, MB85RC64V,
-//       - 128 Kbit: MB85RC128A
+//       - 16 KBit: MB85RC16, MB85RC16V
+//       - 64 KBit: MB85RC64A, MB85RC64V,
+//       - 128 KBit: MB85RC128A
 //   - Cypress:
-//       - 4 Kbit: FM24C04B, FM24CL04B
-//       - 16 Kbit: FM24C16B
-//       - 64 Kbit: FM24CL64B, FM24C64B
-//       - 256 Kbit: FM24W256
+//       - 4 KBit: FM24C04B, FM24CL04B
+//       - 16 KBit: FM24C16B
+//       - 64 KBit: FM24CL64B, FM24C64B
+//       - 256 KBit: FM24W256
 
 #define MAXADDRESS_04             512
 #define MAXADDRESS_16             2048
@@ -39,9 +39,9 @@
 #define MAXADDRESS_256            32768
 #define MAXADDRESS_512            65536
 #define MAXADDRESS_1024           65536 // 1M devices are in fact managed as 2 512 devices from lib point of view
-                                        // create 2 instances of the object with each a differnt address
+                                        // create 2 instances of the object with each a different address
 
-// Adresses
+// Addresses
 #define MB85RC_ADDRESS_A000       0x50
 #define MB85RC_ADDRESS_A001       0x51
 #define MB85RC_ADDRESS_A010       0x52
@@ -65,7 +65,7 @@
 #define ERROR_SERIAL_UNAVAILABLE  4  // Serial seems not available
 #define ERROR_DEVICE_ID           5  // Not referenced device ID
 #define ERROR_UNUSED              6  // Unused
-#define ERROR_CHIP_UNIDENTIFIED   7  // Fram chip unidentified
+#define ERROR_CHIP_UNIDENTIFIED   7  // FRAM chip unidentified
 #define ERROR_TOO_SHORT           8  // Number of bytes asked to read null
 #define ERROR_INVALID_BIT_POS     9  // Bit position out of range
 #define ERROR_NOT_PERMITTED       10  // Not permitted operation

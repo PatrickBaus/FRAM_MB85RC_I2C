@@ -22,8 +22,6 @@
 */
 /**************************************************************************/
 
-#include <stdlib.h>
-#include <Wire.h>
 #include "FRAM_MB85RC_I2C.h"
 
 /*========================================================================*/
@@ -35,51 +33,46 @@
     Constructor
 */
 /**************************************************************************/
-FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(void)
-{
+FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(TwoWire* _wire) : wire(_wire) {
     _framInitialised = false;
     _manualMode = false;
     i2c_addr = MB85RC_DEFAULT_ADDRESS;
     wpPin = DEFAULT_WP_PIN;
-    byte result = FRAM_MB85RC_I2C::initWP(DEFAULT_WP_STATUS);
+    FRAM_MB85RC_I2C::initWP(DEFAULT_WP_STATUS);
 
 }
 
-FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(uint8_t address, boolean wp)
+FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(TwoWire* wire, uint8_t address, bool wp) : FRAM_MB85RC_I2C(wire)
 {
     _framInitialised = false;
     _manualMode = false;
     i2c_addr = address;
     wpPin = DEFAULT_WP_PIN;
-    byte result = FRAM_MB85RC_I2C::initWP(wp);
+    FRAM_MB85RC_I2C::initWP(wp);
 }
 
-FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(uint8_t address, boolean wp, int pin)
+FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(TwoWire* wire, uint8_t address, bool wp, int pin) : FRAM_MB85RC_I2C(wire)
 {
     _framInitialised = false;
     _manualMode = false;
     i2c_addr = address;
     wpPin = pin;
-    byte result = FRAM_MB85RC_I2C::initWP(wp);
+    FRAM_MB85RC_I2C::initWP(wp);
 }
 
-FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(uint8_t address, boolean wp, int pin, uint16_t chipDensity)
+FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(TwoWire* _wire, uint8_t address, bool wp, int pin, uint16_t chipDensity): wire(_wire), i2c_addr(address), density(chipDensity), wpPin(pin)
 {
     //This constructor provides capability for chips without the device IDs implemented
     _framInitialised = false;
     _manualMode = true;
-    i2c_addr = address;
-    wpPin = pin;
-    density = chipDensity;
-
-    byte result = FRAM_MB85RC_I2C::initWP(wp);
+    FRAM_MB85RC_I2C::initWP(wp);
 }
 
 /*========================================================================*/
 /*                           PUBLIC FUNCTIONS                             */
 /*========================================================================*/
 
-void FRAM_MB85RC_I2C::begin(void) {
+void FRAM_MB85RC_I2C::begin() {
 
   byte deviceFound = FRAM_MB85RC_I2C::checkDevice();
 
@@ -120,7 +113,7 @@ void FRAM_MB85RC_I2C::begin(void) {
       7 = device not found
 */
 /**************************************************************************/
-byte FRAM_MB85RC_I2C::checkDevice(void)
+byte FRAM_MB85RC_I2C::checkDevice()
 {
   byte result;
   if (_manualMode) {
@@ -163,9 +156,9 @@ byte FRAM_MB85RC_I2C::writeArray (uint16_t framAddr, byte items, uint8_t values[
 
   FRAM_MB85RC_I2C::I2CAddressAdapt(framAddr);
   for (byte i=0; i < items ; i++) {
-    Wire.write(values[i]);
+    wire->write(values[i]);
   }
-  return Wire.endTransmission();
+  return wire->endTransmission();
 }
 
 /**************************************************************************/
@@ -217,11 +210,11 @@ byte FRAM_MB85RC_I2C::readArray (uint16_t framAddr, byte items, uint8_t values[]
   }
   else {
     FRAM_MB85RC_I2C::I2CAddressAdapt(framAddr);
-    result = Wire.endTransmission();
+    result = wire->endTransmission();
 
-    Wire.requestFrom(i2c_addr, (uint8_t)items);
+    wire->requestFrom(i2c_addr, (uint8_t)items);
     for (byte i=0; i < items; i++) {
-      values[i] = Wire.read();
+      values[i] = wire->read();
     }
   }
   return result;
@@ -514,12 +507,12 @@ byte FRAM_MB85RC_I2C::getOneDeviceID(uint8_t idType, uint16_t *id)
 
     @params[in]  none
   @returns
-          boolean
+          bool
           true : ready
           false : not ready
 */
 /**************************************************************************/
-boolean FRAM_MB85RC_I2C::isReady(void) {
+bool FRAM_MB85RC_I2C::isReady(void) {
   return _framInitialised;
 }
 
@@ -530,12 +523,12 @@ boolean FRAM_MB85RC_I2C::isReady(void) {
 
     @params[in]  none
   @returns
-          boolean
+          bool
           true : write protect enabled
           false: wirte protect disabled
 */
 /**************************************************************************/
-boolean FRAM_MB85RC_I2C::getWPStatus(void) {
+bool FRAM_MB85RC_I2C::getWPStatus(void) {
   return wpStatus;
 }
 
@@ -602,7 +595,7 @@ byte FRAM_MB85RC_I2C::disableWP() {
           1-4: error writing at a certain position
 */
 /**************************************************************************/
-byte FRAM_MB85RC_I2C::eraseDevice(void) {
+byte FRAM_MB85RC_I2C::eraseDevice() {
     byte result = 0;
     uint16_t i = 0;
 
@@ -658,10 +651,9 @@ byte FRAM_MB85RC_I2C::eraseDevice(void) {
           return code of Wire.endTransmission() or interpreted error.
 */
 /**************************************************************************/
-byte FRAM_MB85RC_I2C::getDeviceIDs(void)
+byte FRAM_MB85RC_I2C::getDeviceIDs()
 {
   uint8_t localbuffer[3] = { 0, 0, 0 };
-  uint8_t result;
 
   /* Get device IDs sequence   */
   /* 1/ Send 0xF8 to the I2C bus as a write instruction. bit 0: 0 => 0xF8 >> 1 */
@@ -670,14 +662,14 @@ byte FRAM_MB85RC_I2C::getDeviceIDs(void)
   /* Send 0xF9 to I2C bus. By requesting 3 bytes to read, requestFrom() add a 1 bit at the end of a 7 bits address => 0xF9    */
   /* See p.10 of http://www.fujitsu.com/downloads/MICRO/fsa/pdf/products/memory/fram/MB85RC-DS501-00017-3v0-E.pdf             */
 
-  Wire.beginTransmission(MASTER_CODE >> 1);
-  Wire.write((byte)(i2c_addr << 1));
-  result = Wire.endTransmission(false);
+  wire->beginTransmission(MASTER_CODE >> 1);
+  wire->write((byte)(i2c_addr << 1));
+  uint8_t result = wire->endTransmission(false);
 
-  Wire.requestFrom(MASTER_CODE >> 1, 3);
-  localbuffer[0] = (uint8_t) Wire.read();
-  localbuffer[1] = (uint8_t) Wire.read();
-  localbuffer[2] = (uint8_t) Wire.read();
+  wire->requestFrom(MASTER_CODE >> 1, 3);
+  localbuffer[0] = (uint8_t) wire->read();
+  localbuffer[1] = (uint8_t) wire->read();
+  localbuffer[2] = (uint8_t) wire->read();
 
   /* Shift values to separate IDs */
   manufacturer = (localbuffer[0] << 4) + (localbuffer[1] >> 4);
@@ -760,9 +752,9 @@ byte FRAM_MB85RC_I2C::getDeviceIDs(void)
           return Error_0, Error_7, ERROR_10 codes
 */
 /**************************************************************************/
-byte FRAM_MB85RC_I2C::setDeviceIDs(void)
+byte FRAM_MB85RC_I2C::setDeviceIDs()
 {
-  if(_manualMode) {
+  if (_manualMode) {
     switch(density) {
       case 4:
         maxaddress = MAXADDRESS_04;
@@ -814,7 +806,7 @@ byte FRAM_MB85RC_I2C::setDeviceIDs(void)
           4: error, debug not activated or Serial not available
 */
 /**************************************************************************/
-byte FRAM_MB85RC_I2C::deviceIDs2Serial(void) {
+byte FRAM_MB85RC_I2C::deviceIDs2Serial() {
     byte result = ERROR_4;
   #if defined(SERIAL_DEBUG) && (SERIAL_DEBUG == 1)
     if (Serial){
@@ -841,14 +833,14 @@ byte FRAM_MB85RC_I2C::deviceIDs2Serial(void) {
     @params[in]   wpPin
                   pin number for WP pin
     @params[in]   wp
-                  Boolean for startup WP
+                  bool for startup WP
   @param[out]    wpStatus
   @returns
           0: success, init done
           1: error - should never happen
 */
 /**************************************************************************/
-byte FRAM_MB85RC_I2C::initWP(boolean wp) {
+byte FRAM_MB85RC_I2C::initWP(bool wp) {
   byte result;
   if (MANAGE_WP) {
     pinMode(wpPin,OUTPUT);
@@ -881,8 +873,6 @@ byte FRAM_MB85RC_I2C::initWP(boolean wp) {
 /**************************************************************************/
 void FRAM_MB85RC_I2C::I2CAddressAdapt(uint16_t framAddr) {
 
-  uint8_t chipaddress;
-
   switch(density) {
     case 4:
       //chipaddress = (i2c_addr | ((framAddr >> 8) & 0x1)); //Issue #10
@@ -893,23 +883,22 @@ void FRAM_MB85RC_I2C::I2CAddressAdapt(uint16_t framAddr) {
       i2c_addr = ((i2c_addr & 0b11111000) | ((framAddr >> 8) & 0b00000111));
       break;
     default:
-      chipaddress = i2c_addr;
       break;
   }
 
   #if defined(SERIAL_DEBUG) && (SERIAL_DEBUG == 1)
     Serial.print("Calculated address 0x");
-    Serial.println(chipaddress, HEX);
+    Serial.println(i2c_addr, HEX);
   #endif
 
   if (density < 64) {
-    Wire.beginTransmission(i2c_addr);
-    Wire.write(framAddr & 0xFF);
+    wire->beginTransmission(i2c_addr);
+    wire->write(framAddr & 0xFF);
   }
   else {
-    Wire.beginTransmission(i2c_addr);
-    Wire.write(framAddr >> 8);
-    Wire.write(framAddr & 0xFF);
+    wire->beginTransmission(i2c_addr);
+    wire->write(framAddr >> 8);
+    wire->write(framAddr & 0xFF);
   }
   return;
 }
