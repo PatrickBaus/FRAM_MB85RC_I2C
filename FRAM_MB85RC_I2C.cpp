@@ -213,8 +213,19 @@ byte FRAM_MB85RC_I2C::readArray (uint16_t framAddr, byte items, uint8_t values[]
 
   FRAM_MB85RC_I2C::I2CAddressAdapt(framAddr);
   byte result = wire->endTransmission();
+  if (result != ERROR_0) {
+    return result;
+  }
 
-  wire->requestFrom(i2c_addr, (uint8_t)items);
+  byte received = wire->requestFrom(i2c_addr, (uint8_t)items);
+  if (received != items) {
+    // The device did not answer (completely).
+    // Drain whatever was received and do not touch the output buffer.
+    while (wire->available() > 0) {
+      wire->read();
+    }
+    return ERROR_2;
+  }
   for (byte i=0; i < items; i++) {
     values[i] = wire->read();
   }
@@ -237,10 +248,7 @@ byte FRAM_MB85RC_I2C::readArray (uint16_t framAddr, byte items, uint8_t values[]
 /**************************************************************************/
 byte FRAM_MB85RC_I2C::readByte (uint16_t framAddr, uint8_t *value)
 {
-  uint8_t buffer[1];
-  byte result = FRAM_MB85RC_I2C::readArray(framAddr, 1, buffer);
-  *value = buffer[0];
-  return result;
+  return FRAM_MB85RC_I2C::readArray(framAddr, 1, value);
 }
 /**************************************************************************/
 /*!
@@ -260,7 +268,9 @@ byte FRAM_MB85RC_I2C::copyByte (uint16_t origAddr, uint16_t destAddr)
 {
   uint8_t buffer[1];
   byte result = FRAM_MB85RC_I2C::readByte(origAddr, buffer);
-  result = FRAM_MB85RC_I2C::writeByte(destAddr, buffer[0]);
+  if (result == ERROR_0) {
+    result = FRAM_MB85RC_I2C::writeByte(destAddr, buffer[0]);
+  }
   return result;
 }
 
@@ -289,7 +299,9 @@ byte FRAM_MB85RC_I2C::readBit(uint16_t framAddr, uint8_t bitNb, byte *bit)
   else {
     uint8_t buffer[1];
     result = FRAM_MB85RC_I2C::readArray(framAddr, 1, buffer);
-    *bit = bitRead(buffer[0], bitNb);
+    if (result == ERROR_0) {
+      *bit = bitRead(buffer[0], bitNb);
+    }
   }
   return result;
 }
@@ -316,8 +328,10 @@ byte FRAM_MB85RC_I2C::setOneBit(uint16_t framAddr, uint8_t bitNb)
   else {
     uint8_t buffer[1];
     result = FRAM_MB85RC_I2C::readArray(framAddr, 1, buffer);
-    bitSet(buffer[0], bitNb);
-    result = FRAM_MB85RC_I2C::writeArray(framAddr, 1, buffer);
+    if (result == ERROR_0) {
+      bitSet(buffer[0], bitNb);
+      result = FRAM_MB85RC_I2C::writeArray(framAddr, 1, buffer);
+    }
   }
   return result;
 }
@@ -343,8 +357,10 @@ byte FRAM_MB85RC_I2C::clearOneBit(uint16_t framAddr, uint8_t bitNb)
   else {
     uint8_t buffer[1];
     result = FRAM_MB85RC_I2C::readArray(framAddr, 1, buffer);
-    bitClear(buffer[0], bitNb);
-    result = FRAM_MB85RC_I2C::writeArray(framAddr, 1, buffer);
+    if (result == ERROR_0) {
+      bitClear(buffer[0], bitNb);
+      result = FRAM_MB85RC_I2C::writeArray(framAddr, 1, buffer);
+    }
   }
   return result;
 }
@@ -370,15 +386,10 @@ byte FRAM_MB85RC_I2C::toggleBit(uint16_t framAddr, uint8_t bitNb)
   else {
     uint8_t buffer[1];
     result = FRAM_MB85RC_I2C::readArray(framAddr, 1, buffer);
-
-    if ( (buffer[0] & (1 << bitNb)) == (1 << bitNb) )
-    {
-      bitClear(buffer[0], bitNb);
+    if (result == ERROR_0) {
+      buffer[0] ^= (uint8_t)(1 << bitNb);
+      result = FRAM_MB85RC_I2C::writeArray(framAddr, 1, buffer);
     }
-    else {
-      bitSet(buffer[0], bitNb);
-    }
-    result = FRAM_MB85RC_I2C::writeArray(framAddr, 1, buffer);
   }
   return result;
 }
@@ -398,7 +409,9 @@ byte FRAM_MB85RC_I2C::readWord(uint16_t framAddr, uint16_t *value)
 {
   uint8_t buffer[2];
   byte result = FRAM_MB85RC_I2C::readArray(framAddr, 2, buffer);
-  *value = *reinterpret_cast<uint16_t *>(buffer);
+  if (result == ERROR_0) {
+    *value = *reinterpret_cast<uint16_t *>(buffer);
+  }
   return result;
 }
 
@@ -435,9 +448,10 @@ byte FRAM_MB85RC_I2C::readLong(uint16_t framAddr, uint32_t *value)
 {
   uint8_t buffer[4];
   byte result = FRAM_MB85RC_I2C::readArray(framAddr, 4, buffer);
-  *value = *reinterpret_cast<uint32_t *>(buffer);
+  if (result == ERROR_0) {
+    *value = *reinterpret_cast<uint32_t *>(buffer);
+  }
   return result;
-
 }
 /**************************************************************************/
 /*!
