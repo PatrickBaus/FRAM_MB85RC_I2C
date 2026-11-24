@@ -16,7 +16,7 @@ For SPI chips, please have a look on [Christophe Persoz's repo](https://github.c
 - Write one 8-bits, 16-bits or 32-bits value
 - Write one array of bytes 
 - Read one 8-bits, 16-bits or 32-bits value
-- Read one array of bytes (up to 256 per call - maximum supported by Arduino's Wire lib)
+- Read one array of bytes (up to 255 per call, limited by the buffer of the board's Wire lib - 32 bytes on AVR boards)
 - Move a byte from an address to another
 - Get device information
 	- 1: Manufacturer ID
@@ -100,7 +100,7 @@ An interesting [document](Docs/Fujitsu_FRAM_difference_addressing_scheme_over_I2
 ## Errors ##
 The error management is eased by returning a byte value for almost each method. Most of the time, this is the status code from Wire.endTransmission() function.
 - 0: success
-- 1: data too long to fit in transmit buffer
+- 1: data too long to fit in the transmit or receive buffer of the Wire library (32 bytes including the memory address on AVR boards)
 - 2: received NACK on transmit of address
 - 3: received NACK on transmit of data
 - 4: Serial not accessible
