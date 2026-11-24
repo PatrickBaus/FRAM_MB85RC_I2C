@@ -12,7 +12,7 @@
 // The density codes gives the memory's addressing scheme
 #define DENSITY_MB85RC04V         0x00 // 4K
 #define DENSITY_MB85RC64TA        0x03 // 64K
-#define DENSITY_MB85RC256V        0x05 // 512K
+#define DENSITY_MB85RC256V        0x05 // 256K
 #define DENSITY_MB85RC512T        0x06 // 512K
 #define DENSITY_MB85RC1MT         0x07 // 1M
 
@@ -32,13 +32,13 @@
 //       - 64 KBit: FM24CL64B, FM24C64B
 //       - 256 KBit: FM24W256
 
-#define MAXADDRESS_04             512
-#define MAXADDRESS_16             2048
-#define MAXADDRESS_64             8192
-#define MAXADDRESS_128            16384
-#define MAXADDRESS_256            32768
-#define MAXADDRESS_512            65536
-#define MAXADDRESS_1024           65536 // 1M devices are in fact managed as 2 512 devices from lib point of view
+#define MAXADDRESS_04             512UL
+#define MAXADDRESS_16             2048UL
+#define MAXADDRESS_64             8192UL
+#define MAXADDRESS_128            16384UL
+#define MAXADDRESS_256            32768UL
+#define MAXADDRESS_512            65536UL
+#define MAXADDRESS_1024           65536UL // 1M devices are in fact managed as 2 512 devices from lib point of view
                                         // create 2 instances of the object with each a different address
 
 // Addresses
