@@ -57,6 +57,7 @@
  #include <WProgram.h>
 #endif
 
+#include <string.h>
 #include <Wire.h>
 #include "FRAM_defines.h"
 
