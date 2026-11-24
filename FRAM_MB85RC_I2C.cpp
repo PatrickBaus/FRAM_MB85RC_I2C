@@ -33,30 +33,18 @@
     Constructor
 */
 /**************************************************************************/
-FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(TwoWire* _wire) : wire(_wire) {
-    _framInitialised = false;
-    _manualMode = false;
-    i2c_addr = MB85RC_DEFAULT_ADDRESS;
-    wpPin = DEFAULT_WP_PIN;
-    FRAM_MB85RC_I2C::initWP(DEFAULT_WP_STATUS);
-
+FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(TwoWire* _wire) : FRAM_MB85RC_I2C(_wire, MB85RC_DEFAULT_ADDRESS, DEFAULT_WP_STATUS, DEFAULT_WP_PIN)
+{
 }
 
-FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(TwoWire* wire, uint8_t address, bool wp) : FRAM_MB85RC_I2C(wire)
+FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(TwoWire* _wire, uint8_t address, bool wp) : FRAM_MB85RC_I2C(_wire, address, wp, DEFAULT_WP_PIN)
+{
+}
+
+FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(TwoWire* _wire, uint8_t address, bool wp, int pin) : wire(_wire), i2c_addr(address), wpPin(pin)
 {
     _framInitialised = false;
     _manualMode = false;
-    i2c_addr = address;
-    wpPin = DEFAULT_WP_PIN;
-    FRAM_MB85RC_I2C::initWP(wp);
-}
-
-FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(TwoWire* wire, uint8_t address, bool wp, int pin) : FRAM_MB85RC_I2C(wire)
-{
-    _framInitialised = false;
-    _manualMode = false;
-    i2c_addr = address;
-    wpPin = pin;
     FRAM_MB85RC_I2C::initWP(wp);
 }
 
