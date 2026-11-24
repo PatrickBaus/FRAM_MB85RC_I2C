@@ -67,9 +67,16 @@
 //#endif
 
 // Managing Write protect pin
+// These settings can be overridden using compiler flags (e.g. -DMANAGE_WP=true)
+#ifndef MANAGE_WP
 #define MANAGE_WP false //false if WP pin remains not connected
+#endif
+#ifndef DEFAULT_WP_PIN
 #define DEFAULT_WP_PIN	13 //write protection pin - active high, write enabled when low
+#endif
+#ifndef DEFAULT_WP_STATUS
 #define DEFAULT_WP_STATUS  false //false means protection is off - write is enabled
+#endif
 
 class FRAM_MB85RC_I2C {
     public:
