@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: Unit tests (${{ matrix.compiler }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtest-dev libgmock-dev
+
+      - name: Build
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: |
+          cmake -S tests -B build -DFRAM_SANITIZE=ON
+          cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --parallel 4
+
+  coverage:
+    name: Coverage (100 % required)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtest-dev libgmock-dev
+          pipx install gcovr==8.3
+
+      - name: Build
+        run: |
+          cmake -S tests -B build -DFRAM_COVERAGE=ON
+          cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --parallel 4
+
+      - name: Check coverage
+        run: |
+          mkdir coverage
+          gcovr --root . --filter 'FRAM_MB85RC_I2C\.cpp$' --exclude-throw-branches \
+            --txt-summary --txt - \
+            --html-details coverage/index.html \
+            --fail-under-line 100 --fail-under-function 100 --fail-under-branch 100 \
+            build
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+
+  compile-examples:
+    name: Examples (${{ matrix.board.fqbn }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        board:
+          - fqbn: arduino:avr:uno
+            platforms: |
+              - name: arduino:avr
+          - fqbn: arduino:avr:mega
+            platforms: |
+              - name: arduino:avr
+          - fqbn: arduino:samd:mkrzero
+            platforms: |
+              - name: arduino:samd
+          - fqbn: esp32:esp32:esp32
+            platforms: |
+              - name: esp32:esp32
+                source-url: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile examples
+        uses: arduino/compile-sketches@v1
+        with:
+          fqbn: ${{ matrix.board.fqbn }}
+          platforms: ${{ matrix.board.platforms }}
+          libraries: |
+            - source-path: ./
+          sketch-paths: |
+            - examples
+          enable-deltas-report: false

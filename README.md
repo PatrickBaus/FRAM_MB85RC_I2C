@@ -1,6 +1,8 @@
 Arduino library for I2C FRAM - Fujitsu MB85RC & Cypress FM24, CY15B
 ==============
 
+[![CI](https://github.com/PatrickBaus/FRAM_MB85RC_I2C/actions/workflows/ci.yml/badge.svg)](https://github.com/PatrickBaus/FRAM_MB85RC_I2C/actions/workflows/ci.yml)
+
 I2C Ferroelectric Random Access Memory (FRAM). Read/write endurance for each memory slot : 10^12 cycles and more.
 9~16 bit adresses, 8 bits data slots.
 
@@ -42,6 +44,8 @@ For SPI chips, please have a look on [Christophe Persoz's repo](https://github.c
 	v1.1.0b1 - Fixing checkDevice() + end of range memory map check + better manual mode example
 	v1.2.0 - Uses reinterpret_cast instead of bit shift / masking for performance. Breaks backward compatibility with previous code - See PR#6
 	v1.2.1 - Fix issue #11, issue #13, issue #10, Updating tested chips table
+	v1.3.0 - Fix access to last byte of memory map
+	v1.3.1 - Fix 512K & 1M devices, memory range check, error handling of failed reads, WP pin initialisation. Add unit tests & CI
 
 ## Devices ##
 
@@ -117,6 +121,21 @@ The error management is eased by returning a byte value for almost each method. 
 - Please comment about other devices (Memory & Arduino Boards) - A specific [thread](https://github.com/sosandroid/FRAM_MB85RC_I2C/issues/3) has been opened.
 
 - While testing your device, please use the manual mode & the readIDs examples
+
+### Unit tests ###
+The library comes with a host-side test suite (GoogleTest) that runs the driver against a simulated I2C bus and FRAM chip, so no hardware is required. It lives in [tests/](tests) and is run by the CI on every push, together with a 100 % line, function and branch coverage check and a compile test of all examples.
+
+    sudo apt install cmake libgtest-dev libgmock-dev   # GoogleTest is downloaded if it is not installed
+    cmake -S tests -B build -DFRAM_SANITIZE=ON
+    cmake --build build
+    ctest --test-dir build --output-on-failure
+
+To get the coverage report, install [gcovr](https://gcovr.com) and run
+
+    cmake -S tests -B build-coverage -DFRAM_COVERAGE=ON
+    cmake --build build-coverage
+    ctest --test-dir build-coverage
+    gcovr --root . --filter 'FRAM_MB85RC_I2C\.cpp$' --exclude-throw-branches --txt-metric branch build-coverage
 
 ## To do ##
 - Test all devices - [Testing thread](https://github.com/sosandroid/FRAM_MB85RC_I2C/issues/3)

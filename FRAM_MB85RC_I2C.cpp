@@ -19,6 +19,8 @@
     v1.2.0 - Uses reinterpret_cast instead of bit shift / masking for performance. Breaks backward compatibility with previous code - See PR#6
     v1.2.1 - Fix comment line #76 (issue #11), max address define statement for 512K & 1M chips (issue 13), 0b000XXXXXXXX on <64kb device (issue #10)
     v1.3.0 - Fix access to las byte of memory map by @marmik18 - Commit 690a9ac
+    v1.3.1 - Fix 512K & 1M devices (max address overflow), off-by-one in the memory range check, error handling of failed reads,
+             double WP pin initialisation, unaligned access in readWord()/readLong(). Add unit tests & CI
 */
 /**************************************************************************/
 
@@ -116,7 +118,8 @@ byte FRAM_MB85RC_I2C::checkDevice()
     result = getDeviceIDs();
   }
 
-  if ((result == ERROR_0) && ((manufacturer == FUJITSU_MANUFACT_ID) || (manufacturer == CYPRESS_MANUFACT_ID) || (manufacturer == MANUALMODE_MANUFACT_ID)) && (maxaddress != 0)) {
+  // Both functions only return ERROR_0 if the manufacturer and the density are known
+  if (result == ERROR_0) {
     _framInitialised = true;
   }
   else {
@@ -782,51 +785,44 @@ byte FRAM_MB85RC_I2C::getDeviceIDs()
 
   @param[out]    The memory max address of storage slot
     @returns
-          return Error_0, Error_7, ERROR_10 codes
+          return Error_0, Error_7 codes
 */
 /**************************************************************************/
 byte FRAM_MB85RC_I2C::setDeviceIDs()
 {
-  if (_manualMode) {
-    switch(density) {
-      case 4:
-        maxaddress = MAXADDRESS_04;
-        break;
-      case 16:
-        maxaddress = MAXADDRESS_16;
-        break;
-      case 64:
-        maxaddress = MAXADDRESS_64;
-        break;
-      case 128:
-        maxaddress = MAXADDRESS_128;
-        break;
-      case 256:
-        maxaddress = MAXADDRESS_256;
-        break;
-      case 512:
-        maxaddress = MAXADDRESS_512;
-        break;
-      case 1024:
-        maxaddress = MAXADDRESS_1024;
-        break;
-      default:
-        maxaddress = 0; /* means error */
-        break;
-    }
-    densitycode = MANUALMODE_DENSITY_ID;
-    productid = MANUALMODE_PRODUCT_ID;
-    manufacturer = MANUALMODE_MANUFACT_ID;
-    if (maxaddress !=0) {
-      return ERROR_0;
-    }
-    else {
-      return ERROR_7;
-    }
+  switch(density) {
+    case 4:
+      maxaddress = MAXADDRESS_04;
+      break;
+    case 16:
+      maxaddress = MAXADDRESS_16;
+      break;
+    case 64:
+      maxaddress = MAXADDRESS_64;
+      break;
+    case 128:
+      maxaddress = MAXADDRESS_128;
+      break;
+    case 256:
+      maxaddress = MAXADDRESS_256;
+      break;
+    case 512:
+      maxaddress = MAXADDRESS_512;
+      break;
+    case 1024:
+      maxaddress = MAXADDRESS_1024;
+      break;
+    default:
+      maxaddress = 0; /* means error */
+      break;
   }
-  else {
-    return ERROR_10;
+  densitycode = MANUALMODE_DENSITY_ID;
+  productid = MANUALMODE_PRODUCT_ID;
+  manufacturer = MANUALMODE_MANUFACT_ID;
+  if (maxaddress != 0) {
+    return ERROR_0;
   }
+  return ERROR_7;
 }
 /**************************************************************************/
 /*!
@@ -848,8 +844,12 @@ byte FRAM_MB85RC_I2C::deviceIDs2Serial() {
       Serial.print("ProductID 0x"); Serial.println(productid, HEX);
       Serial.print("Density code 0x"); Serial.println(densitycode, HEX);
       Serial.print("Density "); Serial.print(density, DEC); Serial.println("K");
-      if ((manufacturer != MANUALMODE_MANUFACT_ID) && (density > 0))  Serial.println("Device identfied automatically");
-      if ((manufacturer == MANUALMODE_MANUFACT_ID) && (density > 0))  Serial.println("Device properties set");
+      if (manufacturer != MANUALMODE_MANUFACT_ID) {
+        Serial.println("Device identfied automatically");
+      }
+      else {
+        Serial.println("Device properties set");
+      }
       Serial.println("...... ...... ......");
       result = ERROR_0;
     }
