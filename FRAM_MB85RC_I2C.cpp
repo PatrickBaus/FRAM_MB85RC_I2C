@@ -680,10 +680,24 @@ byte FRAM_MB85RC_I2C::getDeviceIDs()
   wire->write((byte)(i2c_addr << 1));
   uint8_t result = wire->endTransmission(false);
 
-  wire->requestFrom(MASTER_CODE >> 1, 3);
-  localbuffer[0] = (uint8_t) wire->read();
-  localbuffer[1] = (uint8_t) wire->read();
-  localbuffer[2] = (uint8_t) wire->read();
+  bool complete = (wire->requestFrom((uint8_t)(MASTER_CODE >> 1), (uint8_t)3) == 3);
+  if ((result == ERROR_0) && complete) {
+    localbuffer[0] = (uint8_t) wire->read();
+    localbuffer[1] = (uint8_t) wire->read();
+    localbuffer[2] = (uint8_t) wire->read();
+  }
+  else {
+    // No (complete) answer, do not interpret garbage as device IDs
+    while (wire->available() > 0) {
+      wire->read();
+    }
+    manufacturer = 0;
+    densitycode = 0;
+    productid = 0;
+    density = 0; /* means error */
+    maxaddress = 0; /* means error */
+    return (result == ERROR_0) ? ERROR_7 : result;
+  }
 
   /* Shift values to separate IDs */
   manufacturer = (localbuffer[0] << 4) + (localbuffer[1] >> 4);
@@ -715,7 +729,7 @@ byte FRAM_MB85RC_I2C::getDeviceIDs()
         default:
           density = 0; /* means error */
           maxaddress = 0; /* means error */
-          if (result == 0) result = ERROR_7; /*device unidentified, comminication ok*/
+          result = ERROR_7; /*device unidentified, comminication ok*/
           break;
       }
   }
@@ -740,14 +754,14 @@ byte FRAM_MB85RC_I2C::getDeviceIDs()
         default:
           density = 0; /* means error */
           maxaddress = 0; /* means error */
-          if (result == 0) result = ERROR_7; /*device unidentified, comminication ok*/
+          result = ERROR_7; /*device unidentified, comminication ok*/
           break;
       }
   }
   else {
           density = 0; /* means error */
           maxaddress = 0; /* means error */
-          if (result == 0) result = ERROR_7; /*device unidentified, comminication ok*/
+          result = ERROR_7; /*device unidentified, comminication ok*/
   }
 
   return result;
