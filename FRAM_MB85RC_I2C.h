@@ -108,7 +108,7 @@ class FRAM_MB85RC_I2C {
         uint16_t productid;
         uint16_t densitycode;
         uint16_t density;
-        uint16_t maxaddress;
+        uint32_t maxaddress; // size of the memory map in bytes, up to 65536, so it does not fit 16 bits
 
         int wpPin;
         bool wpStatus;

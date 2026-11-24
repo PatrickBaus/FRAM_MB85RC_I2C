@@ -597,7 +597,7 @@ byte FRAM_MB85RC_I2C::disableWP() {
 /**************************************************************************/
 byte FRAM_MB85RC_I2C::eraseDevice() {
     byte result = 0;
-    uint16_t i = 0;
+    uint32_t i = 0;
 
     #ifdef SERIAL_DEBUG
       if (Serial){
@@ -606,7 +606,7 @@ byte FRAM_MB85RC_I2C::eraseDevice() {
     #endif
 
     while((i < maxaddress) && (result == 0)){
-      result = FRAM_MB85RC_I2C::writeByte(i, 0x00);
+      result = FRAM_MB85RC_I2C::writeByte((uint16_t)i, 0x00);
       i++;
     }
 
