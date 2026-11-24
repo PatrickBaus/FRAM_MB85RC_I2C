@@ -156,11 +156,20 @@ byte FRAM_MB85RC_I2C::writeArray (uint16_t framAddr, byte items, uint8_t values[
     return ERROR_11;
   }
 
+  bool overflow = false;
   FRAM_MB85RC_I2C::I2CAddressAdapt(framAddr);
   for (byte i=0; i < items ; i++) {
-    wire->write(values[i]);
+    if (wire->write(values[i]) != 1) {
+      // The transmit buffer of the Wire library is full. The remaining bytes would be dropped silently.
+      overflow = true;
+      break;
+    }
   }
-  return wire->endTransmission();
+  byte result = wire->endTransmission();
+  if ((result == ERROR_0) && overflow) {
+    result = ERROR_1;
+  }
+  return result;
 }
 
 /**************************************************************************/
@@ -219,12 +228,12 @@ byte FRAM_MB85RC_I2C::readArray (uint16_t framAddr, byte items, uint8_t values[]
 
   byte received = wire->requestFrom(i2c_addr, (uint8_t)items);
   if (received != items) {
-    // The device did not answer (completely).
+    // Either the device did not answer or the request does not fit the receive buffer of the Wire library.
     // Drain whatever was received and do not touch the output buffer.
     while (wire->available() > 0) {
       wire->read();
     }
-    return ERROR_2;
+    return (received == 0) ? ERROR_2 : ERROR_1;
   }
   for (byte i=0; i < items; i++) {
     values[i] = wire->read();
