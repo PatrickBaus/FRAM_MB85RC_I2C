@@ -118,6 +118,7 @@ class FRAM_MB85RC_I2C {
     byte initWP(bool wp);
     byte deviceIDs2Serial();
     void I2CAddressAdapt(uint16_t framAddr);
+    bool isInRange(uint16_t framAddr, byte items);
 };
 
 #endif
