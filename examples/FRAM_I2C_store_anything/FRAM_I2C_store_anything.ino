@@ -41,7 +41,7 @@ MYDATA4I2C_t readdata; //data read from memory
 uint16_t writeaddress = 0x025;
 
 //Creating object for FRAM chip
-FRAM_MB85RC_I2C mymemory;
+FRAM_MB85RC_I2C mymemory(&Wire);
 
 void setup() {
 

@@ -20,7 +20,7 @@
 
 
 //Creating object for FRAM chip
-FRAM_MB85RC_I2C mymemory;
+FRAM_MB85RC_I2C mymemory(&Wire);
 
 void setup() {
 
