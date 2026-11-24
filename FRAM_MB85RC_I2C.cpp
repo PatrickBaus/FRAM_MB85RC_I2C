@@ -41,18 +41,20 @@ FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(TwoWire* _wire, uint8_t address, bool wp) : FRA
 {
 }
 
-FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(TwoWire* _wire, uint8_t address, bool wp, int pin) : wire(_wire), i2c_addr(address), wpPin(pin)
+FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(TwoWire* _wire, uint8_t address, bool wp, int pin) :
+    wire(_wire), i2c_addr(address), _framInitialised(false), _manualMode(false),
+    manufacturer(0), productid(0), densitycode(0), density(0), maxaddress(0),
+    wpPin(pin), wpStatus(false)
 {
-    _framInitialised = false;
-    _manualMode = false;
     FRAM_MB85RC_I2C::initWP(wp);
 }
 
-FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(TwoWire* _wire, uint8_t address, bool wp, int pin, uint16_t chipDensity): wire(_wire), i2c_addr(address), density(chipDensity), wpPin(pin)
+FRAM_MB85RC_I2C::FRAM_MB85RC_I2C(TwoWire* _wire, uint8_t address, bool wp, int pin, uint16_t chipDensity) :
+    wire(_wire), i2c_addr(address), _framInitialised(false), _manualMode(true),
+    manufacturer(0), productid(0), densitycode(0), density(chipDensity), maxaddress(0),
+    wpPin(pin), wpStatus(false)
 {
     //This constructor provides capability for chips without the device IDs implemented
-    _framInitialised = false;
-    _manualMode = true;
     FRAM_MB85RC_I2C::initWP(wp);
 }
 
