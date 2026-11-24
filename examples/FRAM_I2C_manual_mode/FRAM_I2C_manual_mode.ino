@@ -70,7 +70,7 @@ uint16_t writeaddress2 = (chipDensity * 128) - 80; // calculated regarding densi
 //--------------------------- Object creation ---------------------------------------
 
 //Creating object for FRAM chip
-FRAM_MB85RC_I2C mymemory(chipaddress, wp, pin, chipDensity);
+FRAM_MB85RC_I2C mymemory(&Wire, chipaddress, wp, pin, chipDensity);
 
 
 //--------------------------- Using Setup() to run the test --------------------------
