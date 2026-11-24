@@ -26,7 +26,149 @@ For SPI chips, please have a look on [Christophe Persoz's repo](https://github.c
 - Manage write protect pin
 - Erase memory (set all chip to 0x00)
 - Prevent cycling through memory map to avoid unwanted overwrites
-- Debug mode manageable from header file
+- Write protect pin management and debug output selectable at compile time
+
+## Usage ##
+
+```cpp
+#include <Wire.h>
+#include <FRAM_MB85RC_I2C.h>
+
+// Chip with Device ID feature at the default address 0x50, detected automatically
+FRAM_MB85RC_I2C fram(&Wire);
+
+void setup() {
+	Serial.begin(115200);
+	Wire.begin();        // The library does not start the I2C bus itself
+	fram.begin();        // Detects the chip and sets up the memory map
+
+	if (!fram.isReady()) {
+		Serial.println("FRAM not found");
+		return;
+	}
+
+	uint16_t value = 0;
+	byte result = fram.writeWord(0x0025, 0xBEEF);
+	if (result == ERROR_SUCCESS) {
+		result = fram.readWord(0x0025, &value);
+	}
+	if (result == ERROR_SUCCESS) {
+		Serial.println(value, HEX);
+	}
+}
+
+void loop() {}
+```
+
+Chips without the Device ID feature (see the tables below) cannot be detected. Tell the library the density instead ("manual mode"):
+
+```cpp
+// I2C address 0x50, write protection off, WP pin 13, 16K chip
+FRAM_MB85RC_I2C fram(&Wire, 0x50, false, 13, 16);
+```
+
+More examples can be found in the [examples](examples) folder.
+
+## Configuration ##
+
+The following settings are evaluated at compile time. All of them have a default and can be overridden with compiler flags, so there is no need to edit the library.
+
+| Flag | Default | Description |
+| ------ | :------: | ------ |
+| `MANAGE_WP` | `false` | `true` if the WP pin of the chip is connected to the MCU. The library then configures the pin as output and drives it. If `false`, no pin is touched and `enableWP()` / `disableWP()` return `ERROR_NOT_PERMITTED` |
+| `DEFAULT_WP_PIN` | `13` | Pin connected to WP, used by the constructors that do not take a pin |
+| `DEFAULT_WP_STATUS` | `false` | Write protection after start-up, used by the constructor that does not take a `wp` argument. `false`: the memory can be written |
+| `SERIAL_DEBUG` | not set | Set to `1` to print debug information to `Serial`: the result of the detection in `begin()`, the calculated I2C address of each access and the start and result of `eraseDevice()`. If `Serial` is not open yet, `begin()` opens it with 9600 baud |
+
+PlatformIO (`platformio.ini`):
+
+```ini
+build_flags =
+	-DMANAGE_WP=true
+	-DDEFAULT_WP_PIN=7
+	-DSERIAL_DEBUG=1
+```
+
+Arduino CLI:
+
+	arduino-cli compile --fqbn arduino:avr:uno --build-property "compiler.cpp.extra_flags=-DMANAGE_WP=true -DDEFAULT_WP_PIN=7" MySketch
+
+The Arduino IDE has no setting for compiler flags. Either change the defaults in `FRAM_MB85RC_I2C.h` or set `compiler.cpp.extra_flags` in a `platform.local.txt` next to the `platform.txt` of the board package. A `#define` in the sketch has no effect, because the library is compiled separately.
+
+## API ##
+
+All functions returning a `byte` return an error code, see [Errors](#errors). `0` (`ERROR_SUCCESS`) means success.
+
+### Constructors ###
+
+| Constructor | Description |
+| ------ | ------ |
+| `FRAM_MB85RC_I2C(TwoWire* wire)` | Chip at the default address `0x50`, detected automatically. Write protection as set by `DEFAULT_WP_STATUS`, WP pin `DEFAULT_WP_PIN` |
+| `FRAM_MB85RC_I2C(TwoWire* wire, uint8_t address, bool wp)` | Chip at `address`, detected automatically. `wp` is the write protection after start-up, WP pin `DEFAULT_WP_PIN` |
+| `FRAM_MB85RC_I2C(TwoWire* wire, uint8_t address, bool wp, int pin)` | As above, with the WP pin `pin` |
+| `FRAM_MB85RC_I2C(TwoWire* wire, uint8_t address, bool wp, int pin, uint16_t chipDensity)` | Manual mode for chips without Device ID feature. `chipDensity` is the density in kbit: `4`, `16`, `64`, `128`, `256`, `512` or `1024` |
+
+- `wire` is the I2C interface the chip is connected to, e.g. `&Wire` or `&Wire1`. `begin()` of the interface must be called by the sketch.
+- `address` is the 7 bit I2C address (`0x50` - `0x57`, see [Adresses](#adresses)). The constants `MB85RC_ADDRESS_A000` to `MB85RC_ADDRESS_A111` can be used.
+- `wp` and `pin` are only used if `MANAGE_WP` is `true`. The pin is configured in the constructor.
+
+### Initialisation and device information ###
+
+| Function | Description |
+| ------ | ------ |
+| `void begin()` | Identifies the chip and sets up the memory map. Must be called once before the memory is accessed, after `wire->begin()` |
+| `byte checkDevice()` | Runs the identification again. Returns `ERROR_SUCCESS` or `ERROR_CHIP_UNIDENTIFIED` and updates `isReady()` |
+| `bool isReady()` | `true` if the chip was identified by the last `begin()` or `checkDevice()` |
+| `byte getOneDeviceID(uint8_t idType, uint16_t *id)` | Reads one property of the chip. `idType`: `1` manufacturer ID, `2` product ID, `3` density code, `4` density in kbit. Returns `ERROR_DEVICE_ID` for any other type. In manual mode the three IDs are `0xF00` |
+
+Until the chip is identified the memory map is empty and every read or write returns `ERROR_OUT_OF_RANGE`.
+
+In manual mode the identification only validates the density, it does not talk to the chip. `isReady()` therefore does not tell whether a chip is actually connected.
+
+### Reading and writing ###
+
+`framAddr` is the address of the first byte within the memory map, starting at 0.
+
+| Function | Description |
+| ------ | ------ |
+| `byte readByte(uint16_t framAddr, uint8_t *value)` | Reads one byte |
+| `byte writeByte(uint16_t framAddr, uint8_t value)` | Writes one byte |
+| `byte readWord(uint16_t framAddr, uint16_t *value)` | Reads a 16 bit value (2 bytes) |
+| `byte writeWord(uint16_t framAddr, uint16_t value)` | Writes a 16 bit value (2 bytes) |
+| `byte readLong(uint16_t framAddr, uint32_t *value)` | Reads a 32 bit value (4 bytes) |
+| `byte writeLong(uint16_t framAddr, uint32_t value)` | Writes a 32 bit value (4 bytes) |
+| `byte readArray(uint16_t framAddr, byte items, uint8_t values[])` | Reads `items` bytes into `values`. `items` must not be 0 (`ERROR_TOO_SHORT`) |
+| `byte writeArray(uint16_t framAddr, byte items, uint8_t values[])` | Writes `items` bytes from `values` |
+| `byte copyByte(uint16_t origAddr, uint16_t destAddr)` | Copies one byte from `origAddr` to `destAddr` |
+| `byte eraseDevice()` | Overwrites the whole memory with `0x00`, byte by byte. Stops at the first error and returns it |
+
+- **Range check:** an access that does not fit completely into the memory map returns `ERROR_OUT_OF_RANGE` and nothing is sent to the chip. The chip itself would roll over to address 0.
+- **Failed reads:** if a read fails, the error is returned and the output variable or buffer is not modified.
+- **Transfer size:** one call is one I2C transfer and is limited by the buffer of the board's Wire library. On AVR boards this is 32 bytes for a read and 32 bytes including the memory address for a write, i.e. 30 data bytes for chips of 64K and above and 31 data bytes for 4K and 16K chips. Larger transfers return `ERROR_TOO_LONG`. A write that is too long is still sent truncated, because the Wire library cannot abort a transmission, so split large arrays into several calls.
+- **Byte order:** words and longs are stored in the byte order of the MCU (little endian on all common Arduino boards). Keep this in mind if the memory is read by another system.
+
+### Bit operations ###
+
+`bitNb` is the bit position within the byte, `0` (LSB) to `7` (MSB). Any other value returns `ERROR_INVALID_BIT_POS`.
+
+| Function | Description |
+| ------ | ------ |
+| `byte readBit(uint16_t framAddr, uint8_t bitNb, byte *bit)` | Reads one bit, `bit` is set to `0` or `1` |
+| `byte setOneBit(uint16_t framAddr, uint8_t bitNb)` | Sets one bit to `1` |
+| `byte clearOneBit(uint16_t framAddr, uint8_t bitNb)` | Sets one bit to `0` |
+| `byte toggleBit(uint16_t framAddr, uint8_t bitNb)` | Inverts one bit |
+
+Setting, clearing and toggling read the byte, modify it and write it back. If the read fails, nothing is written.
+
+### Write protection ###
+
+| Function | Description |
+| ------ | ------ |
+| `byte enableWP()` | Drives the WP pin high, the memory is read-only |
+| `byte disableWP()` | Drives the WP pin low, the memory can be written |
+| `bool getWPStatus()` | `true` if the write protection is enabled. Always `false` if `MANAGE_WP` is `false` |
+
+`enableWP()` and `disableWP()` return `ERROR_NOT_PERMITTED` if `MANAGE_WP` is `false`.
 
 ## Revision History ##
 
@@ -98,18 +240,23 @@ An interesting [document](Docs/Fujitsu_FRAM_difference_addressing_scheme_over_I2
 
 
 ## Errors ##
-The error management is eased by returning a byte value for almost each method. Most of the time, this is the status code from Wire.endTransmission() function.
-- 0: success
-- 1: data too long to fit in the transmit or receive buffer of the Wire library (32 bytes including the memory address on AVR boards)
-- 2: received NACK on transmit of address
-- 3: received NACK on transmit of data
-- 4: Serial not accessible
-- 5: Not referenced device ID
-- 7: Fram chip unidentified
-- 8: number of bytes asked to read null
-- 9: bit position out of range
-- 10: Not permitted operation
-- 11: Out of memory range operation
+Almost every function returns an error code as `byte`. Codes 1 to 3 are the status codes of `Wire.endTransmission()`, the others are generated by the library. Note that some Wire implementations also return 4 (other error) and 5 (timeout), which are passed on unchanged and overlap with the codes of the library. The constants are defined in `FRAM_defines.h`.
+
+| Code | Constant | Description |
+| :------: | ------ | ------ |
+| 0 | `ERROR_SUCCESS` | Success |
+| 1 | `ERROR_TOO_LONG` | Data too long to fit in the transmit or receive buffer of the Wire library (32 bytes including the memory address on AVR boards) |
+| 2 | `ERROR_NACK_ON_ADDRESS` | Received NACK on transmit of the address, or the chip did not answer a read request |
+| 3 | `ERROR_NACK_ON_DATA` | Received NACK on transmit of data |
+| 4 | `ERROR_SERIAL_UNAVAILABLE` | Serial not accessible (debug output) |
+| 5 | `ERROR_DEVICE_ID` | Not referenced device ID type |
+| 7 | `ERROR_CHIP_UNIDENTIFIED` | FRAM chip unidentified |
+| 8 | `ERROR_TOO_SHORT` | Number of bytes asked to read null |
+| 9 | `ERROR_INVALID_BIT_POS` | Bit position out of range |
+| 10 | `ERROR_NOT_PERMITTED` | Not permitted operation |
+| 11 | `ERROR_OUT_OF_RANGE` | Out of memory range operation |
+
+The former names `ERROR_0` to `ERROR_11` are still available.
 
 ## Testing ##
 - Tested against MB85RC256V - breakout board from Adafruit http://www.adafruit.com/product/1895
